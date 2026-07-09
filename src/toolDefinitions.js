@@ -2,14 +2,14 @@ export const toolDefinitions = [
   {
     name: 'search-vault',
     title: 'Search Vault',
-    description: 'Search for content in Obsidian vault notes. CRITICAL: Multiple space-separated terms default to AND (all required). Use OR for better results: "git OR repository OR backup" finds notes with ANY term. Search progressively: start broad (single key term), then narrow down. Don\'t give up after one try! Supports: boolean operators (AND, OR, NOT), field specifiers (title:, content:, tag:), quoted phrases, parentheses. Examples: "kubernetes OR k8s" (broad), "git OR mirror OR backup" (any match), "title:readme OR tag:important", "(docker OR podman) AND deployment"',
+    description: 'Full-text search of note CONTENT. Be efficient: usually ONE search is enough. Use a SINGLE short keyword stem (e.g. "lyze", not "2023 lyzovani"). Space-separated terms are AND (all must appear in the SAME note), so do NOT combine unrelated concepts and do NOT include years/dates/numbers in the query (filter those by reading the note afterwards). For broader matches, OR a few synonyms: "git OR backup". To locate a note by its NAME/title, prefer search-by-title (it also matches the filename) or list-notes instead. Supports AND/OR/NOT, field specifiers (title:, content:, tag:), quoted phrases, parentheses.',
     inputSchema: {
       $schema: 'http://json-schema.org/draft-07/schema#',
       type: 'object',
       properties: {
         query: {
           type: 'string',
-          description: 'Search query. IMPORTANT: Space-separated terms are AND by default (all required). Use OR for broader results: "git OR backup OR mirror". Start with single terms or OR queries, then narrow down. Supports: AND/OR/NOT operators, field specifiers (title:, content:, tag:), quoted phrases, parentheses for grouping',
+          description: 'Search query over note content. Prefer a SINGLE short stem; combine synonyms with OR ("lyze OR ski"). Space-separated terms are AND (all required in one note) - do not include years/numbers or unrelated concepts. Supports AND/OR/NOT, field specifiers (title:, content:, tag:), quoted phrases, parentheses.',
           minLength: 1
         },
         path: {
@@ -116,7 +116,7 @@ export const toolDefinitions = [
                           description: 'Matching line with search terms highlighted using **'
                         }
                       },
-                      required: ['lines', 'highlighted']
+                      required: ['highlighted']
                     }
                   },
                   required: ['line', 'content']
@@ -180,7 +180,7 @@ export const toolDefinitions = [
   {
     name: 'search-by-title',
     title: 'Search by Title',
-    description: 'Search for notes by their H1 title',
+    description: 'Find notes by title. Matches the note H1 heading, and falls back to the FILENAME when a note has no H1 (Obsidian uses the filename as the title). Best tool to locate a note by its name - e.g. query "lyze" finds "Lyze 2023.md".',
     inputSchema: {
       $schema: 'http://json-schema.org/draft-07/schema#',
       type: 'object',

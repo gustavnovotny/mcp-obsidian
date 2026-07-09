@@ -106,15 +106,28 @@ describe('searchByTitle', () => {
     expect(result.results.every(r => r.file.startsWith('Projects/'))).toBe(true);
   });
   
-  it('should handle notes without h1 titles', async () => {
+  it('should fall back to the filename when a note has no h1 title', async () => {
     const mockFiles = ['/test/vault/no-title.md'];
-    
+
     glob.mockResolvedValue(mockFiles);
     stat.mockResolvedValue({ size: 1024 });
     readFile.mockResolvedValue('This note has no title, just content.');
-    
+
     const result = await searchByTitle(mockVaultPath, 'no-title');
-    
+
+    expect(result.results).toHaveLength(1);
+    expect(result.results[0].title).toBe('no-title');
+  });
+
+  it('should not match when neither h1 nor filename matches', async () => {
+    const mockFiles = ['/test/vault/no-title.md'];
+
+    glob.mockResolvedValue(mockFiles);
+    stat.mockResolvedValue({ size: 1024 });
+    readFile.mockResolvedValue('This note has no title, just content.');
+
+    const result = await searchByTitle(mockVaultPath, 'zzz-nomatch');
+
     expect(result.results).toHaveLength(0);
   });
   

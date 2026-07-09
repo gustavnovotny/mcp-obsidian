@@ -9,6 +9,10 @@ import { Errors, MCPError } from './errors.js';
 import { textResponse, structuredResponse, errorResponse, createMetadata, stripSearchContext } from './response-formatter.js';
 
 export function createServer(vaultPath) {
+  // Read-only mode: set MCP_READONLY=1 to hide and reject write operations.
+  const readOnly = process.env.MCP_READONLY === '1';
+  const WRITE_TOOLS = ['write-note', 'delete-note'];
+
   const server = new Server(
     {
       name: 'obsidian-mcp-filesystem',
@@ -25,7 +29,9 @@ export function createServer(vaultPath) {
 
   // Define available tools
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: toolDefinitions,
+    tools: readOnly
+      ? toolDefinitions.filter((t) => !WRITE_TOOLS.includes(t.name))
+      : toolDefinitions,
   }));
 
   // Handle tool calls
@@ -34,6 +40,9 @@ export function createServer(vaultPath) {
     const startTime = Date.now();
 
     try {
+      if (readOnly && WRITE_TOOLS.includes(name)) {
+        throw Errors.invalidParams('Server is read-only; write operations are disabled (MCP_READONLY=1)');
+      }
       switch (name) {
       case 'search-vault': {
         const { query, path: searchPath, caseSensitive = false, includeContext = true, contextLines = 2, limit = 100, offset = 0 } = args;

@@ -147,11 +147,16 @@ export async function searchByTitle(vaultPath, query, searchPath, caseSensitive 
       // I/O: Read file
       const content = await readFile(file, 'utf-8');
 
-      // Pure: Extract title
+      // Pure: Extract title (H1), with filename fallback.
+      // Obsidian commonly uses the filename as the note title (no H1 heading),
+      // so match the query against the H1 first and against the basename as a fallback.
       const titleInfo = extractH1Title(content);
+      const basename = path.basename(file, '.md');
 
       if (titleInfo && titleMatchesQuery(titleInfo.title, query, caseSensitive)) {
         fileTitleMatches.push({ file, titleInfo });
+      } else if (titleMatchesQuery(basename, query, caseSensitive)) {
+        fileTitleMatches.push({ file, titleInfo: { title: basename, line: 1 } });
       }
     } catch (error) {
       // Skip files with read errors
