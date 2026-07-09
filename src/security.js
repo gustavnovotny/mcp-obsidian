@@ -31,6 +31,28 @@ export function validatePath(vaultPath, targetPath) {
 }
 
 /**
+ * Enforces a write-root constraint: when `writeRoot` is set, writes are only
+ * allowed under `<vaultPath>/<writeRoot>`. Used by the Part 6 capture funnel so a
+ * read-only server can still create notes in a single folder (e.g. 00_Inbox).
+ * A falsy `writeRoot` means unrestricted (no-op).
+ * @param {string} vaultPath - The vault root path
+ * @param {string} targetPath - The requested note path (relative to vault root)
+ * @param {string|null} [writeRoot] - The only writable subdir, or null/'' for unrestricted
+ * @throws {MCPError} If the target resolves outside the allowed write root
+ */
+export function validateWriteRoot(vaultPath, targetPath, writeRoot) {
+  if (!writeRoot) return;
+  const resolved = validatePath(vaultPath, targetPath);
+  const rootAbs = path.resolve(vaultPath, writeRoot);
+  if (resolved !== rootAbs && !resolved.startsWith(rootAbs + path.sep)) {
+    throw Errors.accessDenied(
+      `Write denied: this server only permits writes under ${writeRoot}/`,
+      { path: targetPath, writeRoot }
+    );
+  }
+}
+
+/**
  * Validates that a file path has the .md extension
  * @param {string} filePath - The file path to validate
  * @throws {MCPError} If the file is not a markdown file

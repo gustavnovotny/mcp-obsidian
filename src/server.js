@@ -7,11 +7,33 @@ import { searchVault, searchByTitle, listNotes, readNote, writeNote, deleteNote,
 import { toolDefinitions } from './toolDefinitions.js';
 import { Errors, MCPError } from './errors.js';
 import { textResponse, structuredResponse, errorResponse, createMetadata, stripSearchContext } from './response-formatter.js';
+import { validateWriteRoot } from './security.js';
+
+const WRITE_TOOLS = ['write-note', 'delete-note'];
+
+/**
+ * Decides whether a tool is exposed / callable given the server's write policy.
+ * - Not read-only            → every tool (unrestricted).
+ * - Read-only, no writeRoot  → both write tools hidden/blocked (pure read-only).
+ * - Read-only + writeRoot    → only `write-note` is exposed (capture funnel:
+ *   create notes under one root, e.g. 00_Inbox); `delete-note` stays disabled.
+ * @param {string} name - tool name
+ * @param {{ readOnly: boolean, writeRoot: string|null }} policy
+ * @returns {boolean}
+ */
+export function toolEnabled(name, { readOnly, writeRoot }) {
+  if (!WRITE_TOOLS.includes(name)) return true;
+  if (!readOnly) return true;
+  return name === 'write-note' && !!writeRoot;
+}
 
 export function createServer(vaultPath) {
   // Read-only mode: set MCP_READONLY=1 to hide and reject write operations.
+  // Constrained-write mode: MCP_READONLY=1 + MCP_WRITE_ROOT=<subdir> exposes only
+  // `write-note`, and only for paths under <subdir> (the Part 6 capture funnel).
   const readOnly = process.env.MCP_READONLY === '1';
-  const WRITE_TOOLS = ['write-note', 'delete-note'];
+  const writeRoot = process.env.MCP_WRITE_ROOT || null;
+  const policy = { readOnly, writeRoot };
 
   const server = new Server(
     {
@@ -29,9 +51,7 @@ export function createServer(vaultPath) {
 
   // Define available tools
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: readOnly
-      ? toolDefinitions.filter((t) => !WRITE_TOOLS.includes(t.name))
-      : toolDefinitions,
+    tools: toolDefinitions.filter((t) => toolEnabled(t.name, policy)),
   }));
 
   // Handle tool calls
@@ -40,7 +60,7 @@ export function createServer(vaultPath) {
     const startTime = Date.now();
 
     try {
-      if (readOnly && WRITE_TOOLS.includes(name)) {
+      if (!toolEnabled(name, policy)) {
         throw Errors.invalidParams('Server is read-only; write operations are disabled (MCP_READONLY=1)');
       }
       switch (name) {
@@ -146,6 +166,7 @@ export function createServer(vaultPath) {
 
       case 'write-note': {
         const { path: notePath, content } = args;
+        validateWriteRoot(vaultPath, notePath, writeRoot);
         await writeNote(vaultPath, notePath, content);
         
         const metadata = createMetadata(startTime, { 

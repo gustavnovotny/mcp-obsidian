@@ -284,6 +284,13 @@ This server implements comprehensive security measures:
 
 See [MCP_SPEC_COMPLIANCE.md](./MCP_SPEC_COMPLIANCE.md) for detailed compliance information.
 
+## Environment Variables
+
+| Variable | Effect |
+|---|---|
+| `MCP_READONLY=1` | **Read-only mode.** `write-note` and `delete-note` are hidden from `tools/list` and rejected on call. Search/read tools are unaffected. |
+| `MCP_WRITE_ROOT=<subdir>` | **Constrained-write mode** (pair with `MCP_READONLY=1`). Re-exposes **`write-note` only** (never `delete-note`), and only for paths under `<subdir>` (e.g. `00_Inbox`). Writes elsewhere raise `access denied`. Intended for an ingestion funnel that may create notes in one folder while the rest of the vault stays read-only. Combine with a kernel-level read-only bind-mount on the other folders for defense in depth. |
+
 ## Contributing
 
 1. Ensure all tests pass: `npm test`
