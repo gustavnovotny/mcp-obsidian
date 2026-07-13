@@ -31,23 +31,30 @@ export function validatePath(vaultPath, targetPath) {
 }
 
 /**
- * Enforces a write-root constraint: when `writeRoot` is set, writes are only
- * allowed under `<vaultPath>/<writeRoot>`. Used by the Part 6 capture funnel so a
- * read-only server can still create notes in a single folder (e.g. 00_Inbox).
- * A falsy `writeRoot` means unrestricted (no-op).
+ * Enforces a write-root constraint: when one or more roots are set, writes are only
+ * allowed under `<vaultPath>/<root>` for some listed root. Used by the Part 6 ingestion
+ * funnel so a read-only server can still write into e.g. `00_Inbox` and `journals`.
+ * An empty list means unrestricted (no-op).
  * @param {string} vaultPath - The vault root path
  * @param {string} targetPath - The requested note path (relative to vault root)
- * @param {string|null} [writeRoot] - The only writable subdir, or null/'' for unrestricted
- * @throws {MCPError} If the target resolves outside the allowed write root
+ * @param {string|string[]|null} [writeRoots] - Allowed writable subdir(s): an array or a
+ *   comma-separated string (e.g. "00_Inbox,journals"); null/'' for unrestricted
+ * @throws {MCPError} If the target resolves outside every allowed write root
  */
-export function validateWriteRoot(vaultPath, targetPath, writeRoot) {
-  if (!writeRoot) return;
+export function validateWriteRoot(vaultPath, targetPath, writeRoots) {
+  const roots = Array.isArray(writeRoots)
+    ? writeRoots
+    : (writeRoots ? String(writeRoots).split(',').map((s) => s.trim()).filter(Boolean) : []);
+  if (roots.length === 0) return; // unrestricted
   const resolved = validatePath(vaultPath, targetPath);
-  const rootAbs = path.resolve(vaultPath, writeRoot);
-  if (resolved !== rootAbs && !resolved.startsWith(rootAbs + path.sep)) {
+  const ok = roots.some((root) => {
+    const rootAbs = path.resolve(vaultPath, root);
+    return resolved === rootAbs || resolved.startsWith(rootAbs + path.sep);
+  });
+  if (!ok) {
     throw Errors.accessDenied(
-      `Write denied: this server only permits writes under ${writeRoot}/`,
-      { path: targetPath, writeRoot }
+      `Write denied: this server only permits writes under ${roots.join('/, ')}/`,
+      { path: targetPath, writeRoots: roots }
     );
   }
 }

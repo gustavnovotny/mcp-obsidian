@@ -57,3 +57,19 @@ describe('validateWriteRoot — path constraint', () => {
     expect(() => validateWriteRoot(vault, '00_Inbox/../_Private/secret.md', '00_Inbox')).toThrow(MCPError);
   });
 });
+
+describe('validateWriteRoot — multiple roots', () => {
+  it('accepts a path under any listed root (comma string)', () => {
+    expect(() => validateWriteRoot(vault, 'journals/2026-07-14.md', '00_Inbox,journals')).not.toThrow();
+    expect(() => validateWriteRoot(vault, '00_Inbox/x.md', '00_Inbox,journals')).not.toThrow();
+  });
+  it('accepts a path under any listed root (array)', () => {
+    expect(() => validateWriteRoot(vault, 'journals/x.md', ['00_Inbox', 'journals'])).not.toThrow();
+  });
+  it('rejects a path under no listed root', () => {
+    expect(() => validateWriteRoot(vault, '30_Knowledge/x.md', '00_Inbox,journals')).toThrow(MCPError);
+  });
+  it('rejects a sibling that only shares a root prefix', () => {
+    expect(() => validateWriteRoot(vault, 'journalsX/x.md', '00_Inbox,journals')).toThrow(MCPError);
+  });
+});
