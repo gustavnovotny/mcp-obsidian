@@ -186,6 +186,13 @@ Create or update a note with new content.
 - Automatic directory creation
 - Content size validation
 
+### append-note
+Append a single markdown line to the end of a `## Section` in a note (e.g. a daily journal),
+without overwriting existing content.
+- Creates the note if missing (optionally seeded from a `createIfMissing` template)
+- Creates the section heading if absent
+- Never deletes; honours `MCP_WRITE_ROOT` in constrained-write mode
+
 ### delete-note
 Delete a note from your vault.
 - Safe deletion with proper validation
@@ -289,7 +296,7 @@ See [MCP_SPEC_COMPLIANCE.md](./MCP_SPEC_COMPLIANCE.md) for detailed compliance i
 | Variable | Effect |
 |---|---|
 | `MCP_READONLY=1` | **Read-only mode.** `write-note` and `delete-note` are hidden from `tools/list` and rejected on call. Search/read tools are unaffected. |
-| `MCP_WRITE_ROOT=<subdir>` | **Constrained-write mode** (pair with `MCP_READONLY=1`). Re-exposes **`write-note` only** (never `delete-note`), and only for paths under `<subdir>` (e.g. `00_Inbox`). Writes elsewhere raise `access denied`. Intended for an ingestion funnel that may create notes in one folder while the rest of the vault stays read-only. Combine with a kernel-level read-only bind-mount on the other folders for defense in depth. |
+| `MCP_WRITE_ROOT=<subdir>[,<subdir>...]` | **Constrained-write mode** (pair with `MCP_READONLY=1`). Re-exposes **`write-note` and `append-note`** (never `delete-note`), and only for paths under one of the listed roots (comma-separated, e.g. `00_Inbox,journals`). Writes elsewhere raise `access denied`. Intended for an ingestion funnel that may create/append notes in a few folders while the rest of the vault stays read-only. Combine with a kernel-level read-only bind-mount on the other folders for defense in depth. |
 
 ## Contributing
 
