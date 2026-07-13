@@ -415,6 +415,40 @@ export const toolDefinitions = [
     // Output is just a success message, so no outputSchema
   },
   {
+    name: 'append-note',
+    title: 'Append to Note Section',
+    description: 'Append a single markdown line to the end of a "## Section" in a note (e.g. a daily journal). Creates the note — optionally seeded from `createIfMissing` — and the section if either is missing. Never overwrites existing content and cannot delete.',
+    inputSchema: {
+      $schema: 'http://json-schema.org/draft-07/schema#',
+      type: 'object',
+      properties: {
+        path: {
+          type: 'string',
+          description: 'Path to the note relative to vault root',
+          minLength: 1,
+          pattern: '\\.md$'
+        },
+        section: {
+          type: 'string',
+          description: 'Section heading text WITHOUT the leading "## " (e.g. "Osobní")',
+          minLength: 1
+        },
+        line: {
+          type: 'string',
+          description: 'The exact markdown line to append (e.g. "- 14:03 ..." or "- [ ] ...")',
+          minLength: 1
+        },
+        createIfMissing: {
+          type: 'string',
+          description: 'Optional full note content to seed the file if it does not exist yet (e.g. a rendered daily template)'
+        }
+      },
+      required: ['path', 'section', 'line'],
+      additionalProperties: false
+    },
+    // Output is just a success message, so no outputSchema
+  },
+  {
     name: 'delete-note',
     title: 'Delete Note',
     description: 'Delete a note',

@@ -3,20 +3,22 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { searchVault, searchByTitle, listNotes, readNote, writeNote, deleteNote, searchByTags, getNoteMetadata, discoverMocs } from './tools.js';
+import { searchVault, searchByTitle, listNotes, readNote, writeNote, deleteNote, appendNote, searchByTags, getNoteMetadata, discoverMocs } from './tools.js';
 import { toolDefinitions } from './toolDefinitions.js';
 import { Errors, MCPError } from './errors.js';
 import { textResponse, structuredResponse, errorResponse, createMetadata, stripSearchContext } from './response-formatter.js';
 import { validateWriteRoot } from './security.js';
 
-const WRITE_TOOLS = ['write-note', 'delete-note'];
+const WRITE_TOOLS = ['write-note', 'delete-note', 'append-note'];
+// Write tools re-exposed by MCP_WRITE_ROOT in constrained-write mode; delete-note never is.
+const CONSTRAINED_WRITE_TOOLS = ['write-note', 'append-note'];
 
 /**
  * Decides whether a tool is exposed / callable given the server's write policy.
  * - Not read-only            → every tool (unrestricted).
- * - Read-only, no writeRoot  → both write tools hidden/blocked (pure read-only).
- * - Read-only + writeRoot    → only `write-note` is exposed (capture funnel:
- *   create notes under one root, e.g. 00_Inbox); `delete-note` stays disabled.
+ * - Read-only, no writeRoot  → all write tools hidden/blocked (pure read-only).
+ * - Read-only + writeRoot    → `write-note` and `append-note` are exposed (ingestion
+ *   funnel: create/append notes under a listed root); `delete-note` stays disabled.
  * @param {string} name - tool name
  * @param {{ readOnly: boolean, writeRoot: string|null }} policy
  * @returns {boolean}
@@ -24,7 +26,7 @@ const WRITE_TOOLS = ['write-note', 'delete-note'];
 export function toolEnabled(name, { readOnly, writeRoot }) {
   if (!WRITE_TOOLS.includes(name)) return true;
   if (!readOnly) return true;
-  return name === 'write-note' && !!writeRoot;
+  return CONSTRAINED_WRITE_TOOLS.includes(name) && !!writeRoot;
 }
 
 export function createServer(vaultPath) {
@@ -169,11 +171,20 @@ export function createServer(vaultPath) {
         validateWriteRoot(vaultPath, notePath, writeRoot);
         await writeNote(vaultPath, notePath, content);
         
-        const metadata = createMetadata(startTime, { 
+        const metadata = createMetadata(startTime, {
           tool: 'write-note',
-          contentLength: content.length 
+          contentLength: content.length
         });
         return textResponse(`Note written successfully to ${notePath}`, metadata);
+      }
+
+      case 'append-note': {
+        const { path: notePath, section, line, createIfMissing } = args;
+        validateWriteRoot(vaultPath, notePath, writeRoot);
+        await appendNote(vaultPath, notePath, section, line, createIfMissing);
+
+        const metadata = createMetadata(startTime, { tool: 'append-note' });
+        return textResponse(`Appended to ## ${section} in ${notePath}`, metadata);
       }
 
       case 'delete-note': {

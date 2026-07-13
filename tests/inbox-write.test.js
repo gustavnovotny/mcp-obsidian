@@ -28,6 +28,18 @@ describe('toolEnabled — write policy', () => {
     expect(toolEnabled('delete-note', policy)).toBe(false);
     for (const t of nonWrite) expect(toolEnabled(t, policy)).toBe(true);
   });
+
+  it('exposes write-note AND append-note (never delete-note) in constrained-write mode', () => {
+    const policy = { readOnly: true, writeRoot: '00_Inbox,journals' };
+    expect(toolEnabled('write-note', policy)).toBe(true);
+    expect(toolEnabled('append-note', policy)).toBe(true);
+    expect(toolEnabled('delete-note', policy)).toBe(false);
+  });
+
+  it('hides append-note in pure read-only mode', () => {
+    const policy = { readOnly: true, writeRoot: null };
+    expect(toolEnabled('append-note', policy)).toBe(false);
+  });
 });
 
 describe('validateWriteRoot — path constraint', () => {
