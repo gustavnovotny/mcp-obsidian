@@ -449,6 +449,45 @@ export const toolDefinitions = [
     // Output is just a success message, so no outputSchema
   },
   {
+    name: 'complete-task',
+    title: 'Complete Task',
+    description: 'Mark a task done: find the best-matching OPEN "- [ ]" item under a "## Section" (e.g. Úkoly) and flip it to "- [x]". If none matches, append `line` under the section instead. Creates the note/section if missing. Never deletes.',
+    inputSchema: {
+      $schema: 'http://json-schema.org/draft-07/schema#',
+      type: 'object',
+      properties: {
+        path: {
+          type: 'string',
+          description: 'Path to the note relative to vault root',
+          minLength: 1,
+          pattern: '\\.md$'
+        },
+        section: {
+          type: 'string',
+          description: 'Section heading text WITHOUT the leading "## " (e.g. "Úkoly")',
+          minLength: 1
+        },
+        match: {
+          type: 'string',
+          description: 'The task text to match against existing open items (diacritics- and case-insensitive)',
+          minLength: 1
+        },
+        line: {
+          type: 'string',
+          description: 'The completed line to append if no open task matches (e.g. "- [x] ...")',
+          minLength: 1
+        },
+        createIfMissing: {
+          type: 'string',
+          description: 'Optional full note content to seed the file if it does not exist yet (e.g. a rendered daily template)'
+        }
+      },
+      required: ['path', 'section', 'match', 'line'],
+      additionalProperties: false
+    },
+    // Output is just a success message, so no outputSchema
+  },
+  {
     name: 'delete-note',
     title: 'Delete Note',
     description: 'Delete a note',

@@ -11,7 +11,7 @@ import { extractTags as extractTagsPure, hasAllTags } from './tags.js';
 import { extractH1Title, titleMatchesQuery, transformTitleResults } from './title-search.js';
 import { extractNoteMetadata, transformBatchMetadata } from './metadata.js';
 import { extractWikilinks, isMoc } from './links.js';
-import { appendUnderSection } from './journal.js';
+import { appendUnderSection, tickOrAppendTask } from './journal.js';
 import { 
   validatePathWithinBase, 
   validateMarkdownExtension, 
@@ -348,6 +348,47 @@ export async function appendNote(vaultPath, notePath, section, line, createIfMis
       throw Errors.accessDenied(`Permission denied: ${notePath}`, { path: notePath });
     }
     throw Errors.internalError(`Failed to append note: ${error.message}`, { path: notePath });
+  }
+}
+
+export async function completeTask(vaultPath, notePath, section, match, line, createIfMissing) {
+  const paramValidation = validateRequiredParameters({ path: notePath, section, match, line }, ['path', 'section', 'match', 'line']);
+  assertValid(paramValidation, (msg) => Errors.invalidParams(msg));
+
+  const extensionValidation = validateMarkdownExtension(notePath);
+  assertValid(extensionValidation, (msg) => Errors.invalidParams(msg, { path: notePath }));
+
+  const pathValidation = validatePathWithinBase(vaultPath, notePath);
+  assertValid(pathValidation, (msg) => Errors.accessDenied(msg, { path: notePath }));
+
+  const fullPath = pathValidation.resolvedPath;
+  const dir = path.dirname(fullPath);
+
+  let existing;
+  try {
+    existing = await readFile(fullPath, 'utf-8');
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      existing = (createIfMissing != null && String(createIfMissing).length > 0)
+        ? String(createIfMissing)
+        : `# ${path.basename(notePath, '.md')}\n`;
+    } else {
+      throw Errors.internalError(`Failed to read note: ${error.message}`, { path: notePath });
+    }
+  }
+
+  const { ticked, content } = tickOrAppendTask(existing, section, match, line);
+  const sanitized = sanitizeContentPure(content);
+
+  try {
+    await mkdir(dir, { recursive: true });
+    await writeFile(fullPath, sanitized, 'utf-8');
+    return { notePath, ticked };
+  } catch (error) {
+    if (error.code === 'EACCES' || error.code === 'EPERM') {
+      throw Errors.accessDenied(`Permission denied: ${notePath}`, { path: notePath });
+    }
+    throw Errors.internalError(`Failed to complete task: ${error.message}`, { path: notePath });
   }
 }
 

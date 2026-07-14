@@ -3,15 +3,15 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { searchVault, searchByTitle, listNotes, readNote, writeNote, deleteNote, appendNote, searchByTags, getNoteMetadata, discoverMocs } from './tools.js';
+import { searchVault, searchByTitle, listNotes, readNote, writeNote, deleteNote, appendNote, completeTask, searchByTags, getNoteMetadata, discoverMocs } from './tools.js';
 import { toolDefinitions } from './toolDefinitions.js';
 import { Errors, MCPError } from './errors.js';
 import { textResponse, structuredResponse, errorResponse, createMetadata, stripSearchContext } from './response-formatter.js';
 import { validateWriteRoot } from './security.js';
 
-const WRITE_TOOLS = ['write-note', 'delete-note', 'append-note'];
+const WRITE_TOOLS = ['write-note', 'delete-note', 'append-note', 'complete-task'];
 // Write tools re-exposed by MCP_WRITE_ROOT in constrained-write mode; delete-note never is.
-const CONSTRAINED_WRITE_TOOLS = ['write-note', 'append-note'];
+const CONSTRAINED_WRITE_TOOLS = ['write-note', 'append-note', 'complete-task'];
 
 /**
  * Decides whether a tool is exposed / callable given the server's write policy.
@@ -185,6 +185,20 @@ export function createServer(vaultPath) {
 
         const metadata = createMetadata(startTime, { tool: 'append-note' });
         return textResponse(`Appended to ## ${section} in ${notePath}`, metadata);
+      }
+
+      case 'complete-task': {
+        const { path: notePath, section, match, line, createIfMissing } = args;
+        validateWriteRoot(vaultPath, notePath, writeRoot);
+        const result = await completeTask(vaultPath, notePath, section, match, line, createIfMissing);
+
+        const metadata = createMetadata(startTime, { tool: 'complete-task', ticked: result.ticked });
+        return textResponse(
+          result.ticked
+            ? `Ticked matching task in ## ${section} of ${notePath}`
+            : `No open task matched; appended to ## ${section} in ${notePath}`,
+          metadata
+        );
       }
 
       case 'delete-note': {

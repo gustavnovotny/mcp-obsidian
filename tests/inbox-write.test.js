@@ -29,10 +29,11 @@ describe('toolEnabled — write policy', () => {
     for (const t of nonWrite) expect(toolEnabled(t, policy)).toBe(true);
   });
 
-  it('exposes write-note AND append-note (never delete-note) in constrained-write mode', () => {
+  it('exposes write-note, append-note AND complete-task (never delete-note) in constrained-write mode', () => {
     const policy = { readOnly: true, writeRoot: '00_Inbox,journals' };
     expect(toolEnabled('write-note', policy)).toBe(true);
     expect(toolEnabled('append-note', policy)).toBe(true);
+    expect(toolEnabled('complete-task', policy)).toBe(true);
     expect(toolEnabled('delete-note', policy)).toBe(false);
   });
 
