@@ -193,6 +193,12 @@ without overwriting existing content.
 - Creates the section heading if absent
 - Never deletes; honours `MCP_WRITE_ROOT` in constrained-write mode
 
+### complete-task
+Mark a task done: find the best-matching **open** `- [ ]` item under a `## Section` and flip it to
+`- [x]`; if nothing matches, append the completed line instead.
+- Match is diacritics- and case-insensitive (exact, else substring; last match wins)
+- Creates the note/section if missing; never deletes; honours `MCP_WRITE_ROOT`
+
 ### delete-note
 Delete a note from your vault.
 - Safe deletion with proper validation
@@ -296,7 +302,7 @@ See [MCP_SPEC_COMPLIANCE.md](./MCP_SPEC_COMPLIANCE.md) for detailed compliance i
 | Variable | Effect |
 |---|---|
 | `MCP_READONLY=1` | **Read-only mode.** `write-note` and `delete-note` are hidden from `tools/list` and rejected on call. Search/read tools are unaffected. |
-| `MCP_WRITE_ROOT=<subdir>[,<subdir>...]` | **Constrained-write mode** (pair with `MCP_READONLY=1`). Re-exposes **`write-note` and `append-note`** (never `delete-note`), and only for paths under one of the listed roots (comma-separated, e.g. `00_Inbox,journals`). Writes elsewhere raise `access denied`. Intended for an ingestion funnel that may create/append notes in a few folders while the rest of the vault stays read-only. Combine with a kernel-level read-only bind-mount on the other folders for defense in depth. |
+| `MCP_WRITE_ROOT=<subdir>[,<subdir>...]` | **Constrained-write mode** (pair with `MCP_READONLY=1`). Re-exposes **`write-note`, `append-note` and `complete-task`** (never `delete-note`), and only for paths under one of the listed roots (comma-separated, e.g. `00_Inbox,journals`). Writes elsewhere raise `access denied`. Intended for an ingestion funnel that may create/append notes in a few folders while the rest of the vault stays read-only. Combine with a kernel-level read-only bind-mount on the other folders for defense in depth. |
 
 ## Contributing
 
